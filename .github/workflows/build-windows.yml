@@ -11,7 +11,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Get application files
+      - name: Checkout project
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -22,7 +22,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r YouTube_Autopilot_AI/requirements.txt
+          pip install -r requirements.txt
+          pip install pyinstaller
 
       - name: Download FFmpeg
         shell: pwsh
@@ -30,22 +31,16 @@ jobs:
           Invoke-WebRequest "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile ffmpeg.zip
           Expand-Archive ffmpeg.zip -DestinationPath ffmpeg-unpacked
           $folder = Get-ChildItem ffmpeg-unpacked -Directory | Select-Object -First 1
-          New-Item -ItemType Directory -Force YouTube_Autopilot_AI/ffmpeg
-          Copy-Item "$($folder.FullName)/bin/ffmpeg.exe" YouTube_Autopilot_AI/ffmpeg/
-          Copy-Item "$($folder.FullName)/bin/ffprobe.exe" YouTube_Autopilot_AI/ffmpeg/
+          New-Item -ItemType Directory -Force ffmpeg
+          Copy-Item "$($folder.FullName)/bin/ffmpeg.exe" ffmpeg/
+          Copy-Item "$($folder.FullName)/bin/ffprobe.exe" ffmpeg/
 
-      - name: Create standalone EXE
-        shell: pwsh
+      - name: Build Windows application
         run: |
-          cd YouTube_Autopilot_AI
-          pyinstaller --noconfirm --clean --onefile --windowed `
-            --name YouTube-Autopilot-AI `
-            --add-binary "ffmpeg/ffmpeg.exe;ffmpeg" `
-            --add-binary "ffmpeg/ffprobe.exe;ffmpeg" `
-            app.py
+          pyinstaller --noconfirm --clean --onefile --windowed --name YouTube-Autopilot-AI --add-binary "ffmpeg/ffmpeg.exe;ffmpeg" --add-binary "ffmpeg/ffprobe.exe;ffmpeg" app.py
 
-      - name: Upload finished application
+      - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
           name: YouTube-Autopilot-AI-Windows-Portable
-          path: YouTube_Autopilot_AI/dist/YouTube-Autopilot-AI.exe
+          path: dist/YouTube-Autopilot-AI.exe
