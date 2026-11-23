@@ -1,0 +1,7 @@
+YouTube_Autopilot_AI/data/
+YouTube_Autopilot_AI/output/
+YouTube_Autopilot_AI/build/
+YouTube_Autopilot_AI/dist/
+YouTube_Autopilot_AI/*.spec
+__pycache__/
+*.pyc
