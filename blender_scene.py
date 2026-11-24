@@ -3,6 +3,8 @@ import math
 import json
 import sys
 import random
+import os
+from pathlib import Path
 from mathutils import Vector
 
 def arg_config():
@@ -88,7 +90,11 @@ def main():
     scene.render.ffmpeg.format = "MPEG4"
     scene.render.ffmpeg.codec = "H264"
     scene.render.ffmpeg.constant_rate_factor = "MEDIUM"
-    scene.render.filepath = cfg["output"]
+    output_path = Path(cfg["output"]).expanduser().resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    # Blender treats the FFmpeg filepath as a base name and adds the container extension.
+    scene.render.filepath = str(output_path.with_suffix(""))
+    scene.render.use_file_extension = True
     scene.render.ffmpeg.audio_codec = "AAC"
     scene.render.film_transparent = False
     scene.world.color = (0.001, 0.002, 0.008)
