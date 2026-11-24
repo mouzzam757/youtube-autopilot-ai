@@ -129,85 +129,367 @@ def make_script(topic, research, style, planet=None):
     )
 
 class CinematicApp:
+    BG = "#F7F9FC"
+    WHITE = "#FFFFFF"
+    INK = "#182230"
+    MUTED = "#7B8798"
+    BLUE = "#3478F6"
+    PALE_BLUE = "#EDF4FF"
+    LINE = "#E7ECF3"
+    GREEN = "#15966B"
+
     def __init__(self, root):
         self.root = root
         self.root.title("Agent Artifacts")
-        self.root.geometry("900x680")
-        self.root.minsize(780, 590)
-        self.root.configure(bg="#f6f8fc")
+        self.root.geometry("1380x880")
+        self.root.minsize(1080, 720)
+        self.root.configure(bg=self.BG)
         self.events = queue.Queue()
         self.blender = tk.StringVar(value=find_blender())
         self.topic = tk.StringVar(value="TRAPPIST-1 e")
         self.style = tk.StringVar(value=STYLES[4])
         self.resolution = tk.StringVar(value="1280x720")
         self.voice = tk.StringVar(value="en-US-GuyNeural")
-        self.status = tk.StringVar(value="Ready — select a style and enter a topic.")
+        self.status = tk.StringVar(value="Ready to create")
         self._build()
         self.root.after(150, self._poll)
 
     def _build(self):
         style = ttk.Style()
         style.theme_use("clam")
-        style.configure("TCombobox", fieldbackground="#ffffff", background="#ffffff", foreground="#172033")
-        style.configure("TProgressbar", troughcolor="#e6ebf3", background="#3867f5")
-        header = tk.Frame(self.root, bg="#f6f8fc")
-        header.pack(fill="x", padx=28, pady=(22, 8))
-        tk.Label(header, text="AGENT ARTIFACTS", bg="#f6f8fc", fg="#3867f5",
-                 font=("Segoe UI", 10, "bold")).pack(anchor="w")
-        tk.Label(header, text="Your AI-powered video creation studio",
-                 bg="#f6f8fc", fg="#172033", font=("Segoe UI", 23, "bold")).pack(anchor="w", pady=(5, 2))
-        tk.Label(header, text="Discover ideas, create cinematic videos and prepare them for YouTube",
-                 bg="#f6f8fc", fg="#667085", font=("Segoe UI", 10)).pack(anchor="w")
+        style.configure("TCombobox", fieldbackground=self.WHITE, background=self.WHITE,
+                        foreground=self.INK, bordercolor=self.LINE, padding=8)
+        style.map("TCombobox", fieldbackground=[("readonly", self.WHITE)])
+        style.configure("TProgressbar", troughcolor="#EAF0F7", background=self.BLUE,
+                        bordercolor="#EAF0F7", lightcolor=self.BLUE, darkcolor=self.BLUE)
+        style.configure("Treeview", background=self.WHITE, fieldbackground=self.WHITE,
+                        foreground=self.INK, rowheight=34, borderwidth=0)
+        style.configure("Treeview.Heading", background="#F3F6FA", foreground=self.MUTED,
+                        font=("Segoe UI", 9, "bold"), relief="flat")
 
-        panel = tk.Frame(self.root, bg="#ffffff", highlightbackground="#e3e8f0", highlightthickness=1)
-        panel.pack(fill="x", padx=28, pady=16)
-        panel.columnconfigure(1, weight=1)
-        self._label(panel, "VIDEO TOPIC", 0)
-        tk.Entry(panel, textvariable=self.topic, bg="#f5f7fb", fg="#172033", insertbackground="#172033",
-                 relief="flat", font=("Segoe UI", 11)).grid(row=0, column=1, sticky="ew", padx=(0, 18), pady=12, ipady=8)
-        self._label(panel, "VIDEO STYLE", 1)
-        ttk.Combobox(panel, textvariable=self.style, values=STYLES, state="readonly",
-                     font=("Segoe UI", 10)).grid(row=1, column=1, sticky="ew", padx=(0, 18), pady=8, ipady=5)
-        self._label(panel, "RESOLUTION", 2)
-        ttk.Combobox(panel, textvariable=self.resolution, values=["1280x720", "1920x1080"],
-                     state="readonly", font=("Segoe UI", 10)).grid(row=2, column=1, sticky="w", padx=(0, 18), pady=8, ipady=5)
-        self._label(panel, "NARRATION VOICE", 3)
-        ttk.Combobox(panel, textvariable=self.voice,
+        shell = tk.Frame(self.root, bg=self.BG)
+        shell.pack(fill="both", expand=True)
+
+        self.sidebar = tk.Frame(shell, bg=self.WHITE, width=224,
+                                highlightbackground=self.LINE, highlightthickness=1)
+        self.sidebar.pack(side="left", fill="y")
+        self.sidebar.pack_propagate(False)
+
+        brand = tk.Frame(self.sidebar, bg=self.WHITE)
+        brand.pack(fill="x", padx=22, pady=(26, 30))
+        tk.Label(brand, text="✦", bg=self.WHITE, fg=self.BLUE,
+                 font=("Segoe UI Symbol", 25, "bold")).pack(side="left")
+        brand_text = tk.Frame(brand, bg=self.WHITE)
+        brand_text.pack(side="left", padx=9)
+        tk.Label(brand_text, text="AGENT", bg=self.WHITE, fg=self.INK,
+                 font=("Segoe UI", 12, "bold")).pack(anchor="w")
+        tk.Label(brand_text, text="ARTIFACTS", bg=self.WHITE, fg=self.BLUE,
+                 font=("Segoe UI", 12, "bold")).pack(anchor="w")
+
+        tk.Label(self.sidebar, text="WORKSPACE", bg=self.WHITE, fg="#A0AABA",
+                 font=("Segoe UI", 8, "bold")).pack(anchor="w", padx=22, pady=(0, 9))
+        self.nav_buttons = {}
+        for key, label, glyph in [
+            ("Create", "Create video", "✧"),
+            ("Projects", "Projects", "▣"),
+            ("Templates", "Templates", "▤"),
+        ]:
+            self._nav_button(key, label, glyph)
+
+        tk.Label(self.sidebar, text="PREFERENCES", bg=self.WHITE, fg="#A0AABA",
+                 font=("Segoe UI", 8, "bold")).pack(anchor="w", padx=22, pady=(26, 9))
+        self._nav_button("Settings", "Settings", "⚙")
+        self._nav_button("About", "About", "ⓘ")
+
+        side_bottom = tk.Frame(self.sidebar, bg="#F7F9FC",
+                               highlightbackground=self.LINE, highlightthickness=1)
+        side_bottom.pack(side="bottom", fill="x", padx=14, pady=16)
+        tk.Label(side_bottom, text="LOCAL CREATOR STUDIO", bg="#F7F9FC",
+                 fg=self.MUTED, font=("Segoe UI", 8, "bold")).pack(anchor="w", padx=12, pady=(12, 3))
+        tk.Label(side_bottom, text="Your projects stay on this PC.",
+                 bg="#F7F9FC", fg=self.INK, font=("Segoe UI", 8)).pack(anchor="w", padx=12, pady=(0, 12))
+
+        main = tk.Frame(shell, bg=self.BG)
+        main.pack(side="left", fill="both", expand=True)
+        top = tk.Frame(main, bg=self.WHITE, height=74,
+                       highlightbackground=self.LINE, highlightthickness=1)
+        top.pack(fill="x")
+        top.pack_propagate(False)
+        self.page_title = tk.Label(top, text="Create video", bg=self.WHITE, fg=self.INK,
+                                   font=("Segoe UI", 16, "bold"))
+        self.page_title.pack(side="left", padx=28)
+        right_top = tk.Frame(top, bg=self.WHITE)
+        right_top.pack(side="right", padx=28)
+        tk.Label(right_top, text="●", bg=self.WHITE, fg=self.GREEN,
+                 font=("Segoe UI", 10)).pack(side="left")
+        tk.Label(right_top, textvariable=self.status, bg=self.WHITE, fg=self.MUTED,
+                 font=("Segoe UI", 9)).pack(side="left", padx=(6, 0))
+
+        self.content = tk.Frame(main, bg=self.BG)
+        self.content.pack(fill="both", expand=True, padx=26, pady=22)
+        self.pages = {}
+        self._build_create_page()
+        self._build_projects_page()
+        self._build_templates_page()
+        self._build_settings_page()
+        self._build_about_page()
+        self._show_page("Create")
+
+    def _nav_button(self, key, label, glyph):
+        b = tk.Button(self.sidebar, text=f"  {glyph}    {label}", anchor="w",
+                      command=lambda k=key: self._show_page(k),
+                      bg=self.WHITE, fg=self.MUTED, activebackground=self.PALE_BLUE,
+                      activeforeground=self.BLUE, relief="flat", bd=0,
+                      font=("Segoe UI", 10), padx=15, pady=12, cursor="hand2")
+        b.pack(fill="x", padx=12, pady=2)
+        self.nav_buttons[key] = b
+
+    def _show_page(self, key):
+        for page in self.pages.values():
+            page.pack_forget()
+        self.pages[key].pack(fill="both", expand=True)
+        self.page_title.config(text={"Create": "Create video", "Projects": "Your projects",
+                                     "Templates": "Creative templates", "Settings": "Settings",
+                                     "About": "About Agent Artifacts"}[key])
+        for name, button in self.nav_buttons.items():
+            selected = name == key
+            button.configure(bg=self.PALE_BLUE if selected else self.WHITE,
+                             fg=self.BLUE if selected else self.MUTED,
+                             font=("Segoe UI", 10, "bold" if selected else "normal"))
+
+    def _card(self, parent, title=None, subtitle=None):
+        frame = tk.Frame(parent, bg=self.WHITE, highlightbackground=self.LINE,
+                         highlightthickness=1, bd=0)
+        if title:
+            head = tk.Frame(frame, bg=self.WHITE)
+            head.pack(fill="x", padx=18, pady=(16, 4))
+            tk.Label(head, text=title, bg=self.WHITE, fg=self.INK,
+                     font=("Segoe UI", 10, "bold")).pack(anchor="w")
+            if subtitle:
+                tk.Label(frame, text=subtitle, bg=self.WHITE, fg=self.MUTED,
+                         font=("Segoe UI", 8)).pack(anchor="w", padx=18, pady=(0, 10))
+        return frame
+
+    def _field_label(self, parent, text):
+        tk.Label(parent, text=text.upper(), bg=self.WHITE, fg=self.MUTED,
+                 font=("Segoe UI", 8, "bold")).pack(anchor="w", padx=18, pady=(10, 5))
+
+    def _build_create_page(self):
+        page = tk.Frame(self.content, bg=self.BG)
+        self.pages["Create"] = page
+        intro = tk.Frame(page, bg=self.BG)
+        intro.pack(fill="x", pady=(0, 16))
+        tk.Label(intro, text="Bring your next idea to life.", bg=self.BG, fg=self.INK,
+                 font=("Segoe UI", 21, "bold")).pack(anchor="w")
+        tk.Label(intro, text="Choose a visual direction, set your video details, and create a cinematic scene.",
+                 bg=self.BG, fg=self.MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(4, 0))
+
+        style_card = self._card(page, "CHOOSE YOUR VIDEO STYLE",
+                                "Pick the visual treatment for your generated video.")
+        style_card.pack(fill="x", pady=(0, 14))
+        choices = tk.Frame(style_card, bg=self.WHITE)
+        choices.pack(fill="x", padx=14, pady=(2, 14))
+        self.style_buttons = {}
+        for i, name in enumerate(STYLES):
+            short = ["Cinematic\nRealistic", "Animated\nFacts", "Viral\n3D", "Professional\nFacts",
+                     "Exoplanet\nExploration"][i]
+            b = tk.Button(choices, text="✧\n" + short, command=lambda n=name: self._select_style(n),
+                          bg=self.PALE_BLUE if self.style.get() == name else "#F8FAFD",
+                          fg=self.BLUE if self.style.get() == name else self.INK,
+                          activebackground=self.PALE_BLUE, activeforeground=self.BLUE,
+                          relief="flat", bd=0, highlightthickness=1,
+                          highlightbackground=self.BLUE if self.style.get() == name else self.LINE,
+                          font=("Segoe UI", 9, "bold"), padx=8, pady=12, cursor="hand2")
+            b.pack(side="left", fill="x", expand=True, padx=4)
+            self.style_buttons[name] = b
+
+        work = tk.Frame(page, bg=self.BG)
+        work.pack(fill="both", expand=True)
+        left = tk.Frame(work, bg=self.BG)
+        left.pack(side="left", fill="both", expand=True, padx=(0, 14))
+        right = tk.Frame(work, bg=self.BG, width=390)
+        right.pack(side="right", fill="y")
+        right.pack_propagate(False)
+
+        brief = self._card(left, "VIDEO DETAILS", "Tell Agent Artifacts what you want to create.")
+        brief.pack(fill="x", pady=(0, 12))
+        self._field_label(brief, "Video topic")
+        tk.Entry(brief, textvariable=self.topic, bg="#F7F9FC", fg=self.INK,
+                 insertbackground=self.INK, relief="flat", font=("Segoe UI", 11),
+                 highlightthickness=1, highlightbackground=self.LINE,
+                 highlightcolor=self.BLUE).pack(fill="x", padx=18, ipady=10)
+        row = tk.Frame(brief, bg=self.WHITE)
+        row.pack(fill="x", padx=18, pady=(8, 16))
+        col1 = tk.Frame(row, bg=self.WHITE)
+        col1.pack(side="left", fill="x", expand=True, padx=(0, 8))
+        col2 = tk.Frame(row, bg=self.WHITE)
+        col2.pack(side="left", fill="x", expand=True, padx=(8, 0))
+        self._field_label(col1, "Resolution")
+        ttk.Combobox(col1, textvariable=self.resolution, values=["1280x720", "1920x1080"],
+                      state="readonly").pack(fill="x")
+        self._field_label(col2, "Narration voice")
+        ttk.Combobox(col2, textvariable=self.voice,
                      values=["en-US-GuyNeural", "en-US-JennyNeural", "en-GB-RyanNeural", "en-GB-SoniaNeural"],
-                     state="readonly", font=("Segoe UI", 10)).grid(row=3, column=1, sticky="w", padx=(0, 18), pady=8, ipady=5)
-        self._label(panel, "BLENDER EXE", 4)
-        tk.Entry(panel, textvariable=self.blender, bg="#f5f7fb", fg="#172033", insertbackground="white",
-                 relief="flat", font=("Segoe UI", 9)).grid(row=4, column=1, sticky="ew", padx=(0, 8), pady=10, ipady=7)
-        tk.Button(panel, text="Browse", command=self._browse_blender, bg="#e3e8f0", fg="white",
-                  relief="flat", padx=14).grid(row=4, column=2, padx=(0, 18), pady=8)
+                     state="readonly").pack(fill="x")
 
-        actions = tk.Frame(self.root, bg="#f6f8fc")
-        actions.pack(fill="x", padx=28, pady=(0, 12))
-        tk.Button(actions, text="GENERATE 3D VIDEO", command=self.generate,
-                  bg="#3867f5", fg="#ffffff", activebackground="#dce6ff",
-                  font=("Segoe UI", 11, "bold"), relief="flat", padx=22, pady=13).pack(side="left")
-        tk.Button(actions, text="Open Output Folder", command=self.open_output,
-                  bg="#edf2ff", fg="#263248", relief="flat", padx=16, pady=13).pack(side="left", padx=10)
+        blender_card = self._card(left, "RENDER ENGINE", "Blender is used to build the 3D scene locally.")
+        blender_card.pack(fill="x")
+        self._field_label(blender_card, "Blender executable")
+        brow = tk.Frame(blender_card, bg=self.WHITE)
+        brow.pack(fill="x", padx=18, pady=(0, 16))
+        tk.Entry(brow, textvariable=self.blender, bg="#F7F9FC", fg=self.INK,
+                 insertbackground=self.INK, relief="flat", font=("Segoe UI", 9),
+                 highlightthickness=1, highlightbackground=self.LINE).pack(side="left", fill="x", expand=True, ipady=8)
+        tk.Button(brow, text="Browse", command=self._browse_blender, bg=self.PALE_BLUE,
+                  fg=self.BLUE, activebackground="#DCEAFF", relief="flat", bd=0,
+                  font=("Segoe UI", 9, "bold"), padx=14, pady=8,
+                  cursor="hand2").pack(side="left", padx=(8, 0))
 
-        self.progress = ttk.Progressbar(self.root, mode="indeterminate")
-        self.progress.pack(fill="x", padx=28, pady=(4, 6))
-        tk.Label(self.root, textvariable=self.status, bg="#f6f8fc", fg="#667085",
-                 font=("Segoe UI", 9)).pack(anchor="w", padx=28)
-        logbox = tk.Frame(self.root, bg="#ffffff", highlightbackground="#e3e8f0", highlightthickness=1)
-        logbox.pack(fill="both", expand=True, padx=28, pady=14)
-        tk.Label(logbox, text="ACTIVITY LOG", bg="#ffffff", fg="#3867f5",
-                 font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=14, pady=(12, 6))
-        self.log = tk.Text(logbox, bg="#f5f7fb", fg="#263248", insertbackground="#263248",
-                           relief="flat", wrap="word", font=("Consolas", 9), height=12)
-        self.log.pack(fill="both", expand=True, padx=12, pady=(0, 12))
-        self.log.insert("end", "Ready. A rendered 3D video requires Blender and FFmpeg installed.\n")
-        footer = "8 GB RAM mode: Eevee renderer, 720p default, low samples. Rendering can take time."
-        tk.Label(self.root, text=footer, bg="#f6f8fc", fg="#778399",
-                 font=("Segoe UI", 8)).pack(anchor="w", padx=28, pady=(0, 12))
+        preview = self._card(right, "3D SCENE PREVIEW", "A visual workspace for your selected scene.")
+        preview.pack(fill="both", expand=True, pady=(0, 12))
+        canvas_wrap = tk.Frame(preview, bg="#101827")
+        canvas_wrap.pack(fill="both", expand=True, padx=14, pady=(4, 12))
+        self.preview_canvas = tk.Canvas(canvas_wrap, bg="#101827", height=235,
+                                        highlightthickness=0, bd=0)
+        self.preview_canvas.pack(fill="both", expand=True)
+        self._draw_preview()
+        tk.Label(preview, text="PREVIEW PLACEHOLDER  •  FINAL SCENE IS RENDERED BY BLENDER",
+                 bg=self.WHITE, fg=self.MUTED, font=("Segoe UI", 7, "bold")).pack(anchor="center", pady=(0, 12))
 
-    def _label(self, parent, text, row):
-        tk.Label(parent, text=text, bg="#ffffff", fg="#667085",
-                 font=("Segoe UI", 8, "bold")).grid(row=row, column=0, sticky="w", padx=18, pady=10)
+        pipeline = self._card(right, "GENERATION PROGRESS", "Keep this window open while Blender renders.")
+        pipeline.pack(fill="x", pady=(0, 12))
+        self.progress = ttk.Progressbar(pipeline, mode="indeterminate")
+        self.progress.pack(fill="x", padx=16, pady=(8, 6))
+        tk.Label(pipeline, textvariable=self.status, bg=self.WHITE, fg=self.MUTED,
+                 font=("Segoe UI", 8)).pack(anchor="w", padx=16, pady=(0, 10))
+
+        actions = tk.Frame(right, bg=self.BG)
+        actions.pack(fill="x")
+        tk.Button(actions, text="✦   GENERATE 3D VIDEO", command=self.generate,
+                  bg=self.BLUE, fg=self.WHITE, activebackground="#2563D9",
+                  activeforeground=self.WHITE, relief="flat", bd=0,
+                  font=("Segoe UI", 10, "bold"), padx=16, pady=14,
+                  cursor="hand2").pack(fill="x")
+        tk.Button(actions, text="OPEN OUTPUT FOLDER", command=self.open_output,
+                  bg=self.WHITE, fg=self.INK, activebackground=self.PALE_BLUE,
+                  relief="flat", bd=0, font=("Segoe UI", 9, "bold"),
+                  padx=12, pady=11, cursor="hand2").pack(fill="x", pady=(8, 0))
+
+        activity = self._card(page, "RECENT ACTIVITY", "Live messages from your video-generation process.")
+        activity.pack(fill="x", pady=(12, 0))
+        self.log = tk.Text(activity, bg="#F8FAFD", fg="#526174", insertbackground=self.INK,
+                           relief="flat", wrap="word", font=("Consolas", 8), height=4,
+                           padx=10, pady=8)
+        self.log.pack(fill="x", padx=14, pady=(4, 14))
+        self.log.insert("end", "Ready. Choose a style and enter a topic to begin.\n")
+
+    def _draw_preview(self):
+        c = self.preview_canvas
+        c.delete("all")
+        c.update_idletasks()
+        w = max(c.winfo_width(), 330)
+        h = max(c.winfo_height(), 220)
+        c.create_oval(w*.23, h*.10, w*.78, h*.94, fill="#172C50", outline="")
+        c.create_oval(w*.30, h*.16, w*.72, h*.82, fill="#315B9B", outline="")
+        c.create_oval(w*.37, h*.22, w*.68, h*.70, fill="#6F9BE0", outline="")
+        c.create_oval(w*.40, h*.23, w*.52, h*.38, fill="#A9C8F5", outline="")
+        c.create_oval(w*.15, h*.10, w*.18, h*.13, fill="#FFFFFF", outline="")
+        c.create_oval(w*.83, h*.24, w*.85, h*.27, fill="#FFFFFF", outline="")
+        c.create_oval(w*.20, h*.72, w*.22, h*.75, fill="#DDEAFF", outline="")
+        c.create_text(w/2, h*.91, text="YOUR 3D WORLD STARTS HERE",
+                      fill="#DCE8FA", font=("Segoe UI", 8, "bold"))
+
+    def _select_style(self, name):
+        self.style.set(name)
+        for label, button in self.style_buttons.items():
+            selected = label == name
+            button.configure(bg=self.PALE_BLUE if selected else "#F8FAFD",
+                             fg=self.BLUE if selected else self.INK,
+                             highlightbackground=self.BLUE if selected else self.LINE)
+
+    def _build_projects_page(self):
+        page = tk.Frame(self.content, bg=self.BG)
+        self.pages["Projects"] = page
+        tk.Label(page, text="Your generated videos", bg=self.BG, fg=self.INK,
+                 font=("Segoe UI", 20, "bold")).pack(anchor="w")
+        tk.Label(page, text="Rendered MP4 files saved in your local output folder.",
+                 bg=self.BG, fg=self.MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(4, 18))
+        card = self._card(page, "OUTPUT LIBRARY")
+        card.pack(fill="both", expand=True)
+        self.project_list = tk.Listbox(card, bg=self.WHITE, fg=self.INK, relief="flat",
+                                       font=("Segoe UI", 10), selectbackground=self.PALE_BLUE,
+                                       selectforeground=self.BLUE, activestyle="none")
+        self.project_list.pack(fill="both", expand=True, padx=16, pady=14)
+        self._refresh_projects()
+        tk.Button(page, text="OPEN OUTPUT FOLDER", command=self.open_output,
+                  bg=self.BLUE, fg=self.WHITE, relief="flat", bd=0,
+                  font=("Segoe UI", 9, "bold"), padx=16, pady=11).pack(anchor="w", pady=12)
+
+    def _refresh_projects(self):
+        if not hasattr(self, "project_list"):
+            return
+        self.project_list.delete(0, "end")
+        for file in sorted(OUT.glob("*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True):
+            self.project_list.insert("end", f"  {file.name}     •     {file.stat().st_size // (1024*1024)} MB")
+
+    def _build_templates_page(self):
+        page = tk.Frame(self.content, bg=self.BG)
+        self.pages["Templates"] = page
+        tk.Label(page, text="Start with a creative direction", bg=self.BG, fg=self.INK,
+                 font=("Segoe UI", 20, "bold")).pack(anchor="w")
+        tk.Label(page, text="Choose a template to apply it to the Create video workspace.",
+                 bg=self.BG, fg=self.MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(4, 18))
+        for name, desc in [
+            ("Cinematic Realistic", "Atmospheric, realistic-inspired 3D scenes."),
+            ("Animated Facts", "Bright educational visuals and animated storytelling."),
+            ("Viral 3D", "Fast-paced 3D visual direction for short-form ideas."),
+            ("Professional Facts", "Clean, polished visuals for informative videos."),
+            ("Real Exoplanet Cinematic Exploration", "Science-inspired journeys through confirmed exoplanets."),
+        ]:
+            card = self._card(page, name, desc)
+            card.pack(fill="x", pady=5)
+            tk.Button(card, text="USE TEMPLATE", command=lambda n=name: self._use_template(n),
+                      bg=self.PALE_BLUE, fg=self.BLUE, relief="flat", bd=0,
+                      font=("Segoe UI", 8, "bold"), padx=12, pady=8).pack(anchor="e", padx=16, pady=(0, 12))
+
+    def _use_template(self, name):
+        self._select_style(name)
+        self._show_page("Create")
+
+    def _build_settings_page(self):
+        page = tk.Frame(self.content, bg=self.BG)
+        self.pages["Settings"] = page
+        tk.Label(page, text="Studio settings", bg=self.BG, fg=self.INK,
+                 font=("Segoe UI", 20, "bold")).pack(anchor="w")
+        tk.Label(page, text="Configure the local tools used to create your videos.",
+                 bg=self.BG, fg=self.MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(4, 18))
+        card = self._card(page, "BLENDER")
+        card.pack(fill="x", pady=6)
+        tk.Label(card, text="Blender executable path", bg=self.WHITE, fg=self.MUTED,
+                 font=("Segoe UI", 9)).pack(anchor="w", padx=18, pady=(10, 5))
+        row = tk.Frame(card, bg=self.WHITE)
+        row.pack(fill="x", padx=18, pady=(0, 16))
+        tk.Entry(row, textvariable=self.blender, bg="#F7F9FC", fg=self.INK,
+                 relief="flat", font=("Segoe UI", 9)).pack(side="left", fill="x", expand=True, ipady=8)
+        tk.Button(row, text="Browse", command=self._browse_blender, bg=self.PALE_BLUE,
+                  fg=self.BLUE, relief="flat", bd=0, padx=14, pady=8).pack(side="left", padx=8)
+        card2 = self._card(page, "RENDERING")
+        card2.pack(fill="x", pady=6)
+        tk.Label(card2, text="Recommended for an 8 GB RAM PC: start with 1280 × 720. Actual render time depends on scene complexity and frame count.",
+                 bg=self.WHITE, fg=self.MUTED, wraplength=760, justify="left",
+                 font=("Segoe UI", 9)).pack(anchor="w", padx=18, pady=16)
+
+    def _build_about_page(self):
+        page = tk.Frame(self.content, bg=self.BG)
+        self.pages["About"] = page
+        card = self._card(page, "AGENT ARTIFACTS",
+                          "An AI-assisted desktop workspace for researching ideas and creating narrated 3D videos.")
+        card.pack(fill="x", pady=8)
+        tk.Label(card, text="Agent Artifacts combines topic research, narration, Blender scene generation, and FFmpeg video assembly. The generated visuals are 3D artistic scenes and should be reviewed for factual accuracy before publishing.",
+                 bg=self.WHITE, fg=self.MUTED, wraplength=850, justify="left",
+                 font=("Segoe UI", 10)).pack(anchor="w", padx=18, pady=(4, 18))
+        tk.Label(page, text="Built for local Windows desktop use.", bg=self.BG, fg=self.MUTED,
+                 font=("Segoe UI", 9)).pack(anchor="w", pady=10)
 
     def _browse_blender(self):
         path = filedialog.askopenfilename(title="Select blender.exe",
@@ -305,10 +587,11 @@ class CinematicApp:
                     self.status.set("Video completed.")
                     self.log.insert("end", "Open the output folder to play your MP4.\n")
                     self.log.see("end")
+                    self._refresh_projects()
                     messagebox.showinfo("Video ready", "Your video was rendered:\n" + payload)
                 elif kind == "error":
                     self.progress.stop()
-                    self.status.set("Generation failed — see log.")
+                    self.status.set("Generation failed — see activity log.")
                     self.log.insert("end", "\nERROR: " + payload + "\n")
                     self.log.see("end")
                     messagebox.showerror("Generation failed", payload[-2500:])
