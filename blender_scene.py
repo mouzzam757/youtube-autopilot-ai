@@ -99,7 +99,9 @@ def main():
     scene.render.resolution_percentage = 100
     scene.render.fps = 24
     scene.frame_start = 1
-    scene.frame_end = 24 * 16
+    # Match the complete narration duration instead of always rendering a fixed 16 seconds.
+    duration_seconds = max(1.0, float(cfg.get("duration_seconds", 16)))
+    scene.frame_end = max(24, int(round(scene.render.fps * duration_seconds)))
     scene.render.image_settings.file_format = "FFMPEG"
     scene.render.ffmpeg.format = "MPEG4"
     scene.render.ffmpeg.codec = "H264"
