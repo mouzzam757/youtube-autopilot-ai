@@ -131,10 +131,10 @@ def make_script(topic, research, style, planet=None):
 class CinematicApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("YouTube Autopilot AI — Cinematic Studio")
+        self.root.title("Agent Artifacts")
         self.root.geometry("900x680")
         self.root.minsize(780, 590)
-        self.root.configure(bg="#0b1020")
+        self.root.configure(bg="#f6f8fc")
         self.events = queue.Queue()
         self.blender = tk.StringVar(value=find_blender())
         self.topic = tk.StringVar(value="TRAPPIST-1 e")
@@ -148,22 +148,22 @@ class CinematicApp:
     def _build(self):
         style = ttk.Style()
         style.theme_use("clam")
-        style.configure("TCombobox", fieldbackground="#151e33", background="#151e33", foreground="#f4f7ff")
-        style.configure("TProgressbar", troughcolor="#1a2540", background="#59d5c7")
-        header = tk.Frame(self.root, bg="#0b1020")
+        style.configure("TCombobox", fieldbackground="#ffffff", background="#ffffff", foreground="#172033")
+        style.configure("TProgressbar", troughcolor="#e6ebf3", background="#3867f5")
+        header = tk.Frame(self.root, bg="#f6f8fc")
         header.pack(fill="x", padx=28, pady=(22, 8))
-        tk.Label(header, text="CINEMATIC STUDIO", bg="#0b1020", fg="#61dfd0",
+        tk.Label(header, text="AGENT ARTIFACTS", bg="#f6f8fc", fg="#3867f5",
                  font=("Segoe UI", 10, "bold")).pack(anchor="w")
-        tk.Label(header, text="Turn a topic into a moving 3D video",
-                 bg="#0b1020", fg="#f4f7ff", font=("Segoe UI", 23, "bold")).pack(anchor="w", pady=(5, 2))
-        tk.Label(header, text="Free local rendering with Blender + FFmpeg + Edge neural narration",
-                 bg="#0b1020", fg="#9ba9c3", font=("Segoe UI", 10)).pack(anchor="w")
+        tk.Label(header, text="Your AI-powered video creation studio",
+                 bg="#f6f8fc", fg="#172033", font=("Segoe UI", 23, "bold")).pack(anchor="w", pady=(5, 2))
+        tk.Label(header, text="Discover ideas, create cinematic videos and prepare them for YouTube",
+                 bg="#f6f8fc", fg="#667085", font=("Segoe UI", 10)).pack(anchor="w")
 
-        panel = tk.Frame(self.root, bg="#111a2d", highlightbackground="#263653", highlightthickness=1)
+        panel = tk.Frame(self.root, bg="#ffffff", highlightbackground="#e3e8f0", highlightthickness=1)
         panel.pack(fill="x", padx=28, pady=16)
         panel.columnconfigure(1, weight=1)
         self._label(panel, "VIDEO TOPIC", 0)
-        tk.Entry(panel, textvariable=self.topic, bg="#17243b", fg="#f4f7ff", insertbackground="white",
+        tk.Entry(panel, textvariable=self.topic, bg="#f5f7fb", fg="#172033", insertbackground="white",
                  relief="flat", font=("Segoe UI", 11)).grid(row=0, column=1, sticky="ew", padx=(0, 18), pady=12, ipady=8)
         self._label(panel, "VIDEO STYLE", 1)
         ttk.Combobox(panel, textvariable=self.style, values=STYLES, state="readonly",
@@ -176,37 +176,37 @@ class CinematicApp:
                      values=["en-US-GuyNeural", "en-US-JennyNeural", "en-GB-RyanNeural", "en-GB-SoniaNeural"],
                      state="readonly", font=("Segoe UI", 10)).grid(row=3, column=1, sticky="w", padx=(0, 18), pady=8, ipady=5)
         self._label(panel, "BLENDER EXE", 4)
-        tk.Entry(panel, textvariable=self.blender, bg="#17243b", fg="#f4f7ff", insertbackground="white",
+        tk.Entry(panel, textvariable=self.blender, bg="#f5f7fb", fg="#172033", insertbackground="white",
                  relief="flat", font=("Segoe UI", 9)).grid(row=4, column=1, sticky="ew", padx=(0, 8), pady=10, ipady=7)
-        tk.Button(panel, text="Browse", command=self._browse_blender, bg="#263653", fg="white",
+        tk.Button(panel, text="Browse", command=self._browse_blender, bg="#e3e8f0", fg="white",
                   relief="flat", padx=14).grid(row=4, column=2, padx=(0, 18), pady=8)
 
-        actions = tk.Frame(self.root, bg="#0b1020")
+        actions = tk.Frame(self.root, bg="#f6f8fc")
         actions.pack(fill="x", padx=28, pady=(0, 12))
         tk.Button(actions, text="GENERATE 3D VIDEO", command=self.generate,
-                  bg="#55d6c8", fg="#07131e", activebackground="#83f0e3",
+                  bg="#3867f5", fg="#ffffff", activebackground="#dce6ff",
                   font=("Segoe UI", 11, "bold"), relief="flat", padx=22, pady=13).pack(side="left")
         tk.Button(actions, text="Open Output Folder", command=self.open_output,
-                  bg="#1c2942", fg="#f4f7ff", relief="flat", padx=16, pady=13).pack(side="left", padx=10)
+                  bg="#edf2ff", fg="#263248", relief="flat", padx=16, pady=13).pack(side="left", padx=10)
 
         self.progress = ttk.Progressbar(self.root, mode="indeterminate")
         self.progress.pack(fill="x", padx=28, pady=(4, 6))
-        tk.Label(self.root, textvariable=self.status, bg="#0b1020", fg="#9ba9c3",
+        tk.Label(self.root, textvariable=self.status, bg="#f6f8fc", fg="#667085",
                  font=("Segoe UI", 9)).pack(anchor="w", padx=28)
-        logbox = tk.Frame(self.root, bg="#111a2d", highlightbackground="#263653", highlightthickness=1)
+        logbox = tk.Frame(self.root, bg="#ffffff", highlightbackground="#e3e8f0", highlightthickness=1)
         logbox.pack(fill="both", expand=True, padx=28, pady=14)
-        tk.Label(logbox, text="GENERATION LOG", bg="#111a2d", fg="#61dfd0",
+        tk.Label(logbox, text="ACTIVITY LOG", bg="#ffffff", fg="#3867f5",
                  font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=14, pady=(12, 6))
-        self.log = tk.Text(logbox, bg="#0d1526", fg="#d6e0f0", insertbackground="white",
+        self.log = tk.Text(logbox, bg="#f5f7fb", fg="#263248", insertbackground="#263248",
                            relief="flat", wrap="word", font=("Consolas", 9), height=12)
         self.log.pack(fill="both", expand=True, padx=12, pady=(0, 12))
         self.log.insert("end", "Ready. A rendered 3D video requires Blender and FFmpeg installed.\n")
         footer = "8 GB RAM mode: Eevee renderer, 720p default, low samples. Rendering can take time."
-        tk.Label(self.root, text=footer, bg="#0b1020", fg="#71819d",
+        tk.Label(self.root, text=footer, bg="#f6f8fc", fg="#778399",
                  font=("Segoe UI", 8)).pack(anchor="w", padx=28, pady=(0, 12))
 
     def _label(self, parent, text, row):
-        tk.Label(parent, text=text, bg="#111a2d", fg="#9ba9c3",
+        tk.Label(parent, text=text, bg="#ffffff", fg="#667085",
                  font=("Segoe UI", 8, "bold")).grid(row=row, column=0, sticky="w", padx=18, pady=10)
 
     def _browse_blender(self):
