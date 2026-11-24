@@ -272,6 +272,14 @@ class CinematicApp:
             if result.returncode:
                 raise RuntimeError("Blender failed:\n" + (result.stderr or result.stdout)[-5000:])
             scene_video = OUT / "blender_scene.mp4"
+            if not scene_video.is_file():
+                alternatives = sorted(OUT.glob("blender_scene*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True)
+                if alternatives:
+                    scene_video = alternatives[0]
+                else:
+                    blender_log = (result.stdout or "") + "\n" + (result.stderr or "")
+                    raise RuntimeError("Blender returned successfully but did not create the expected MP4:\n"
+                                       + str(scene_video) + "\n\nBlender output:\n" + blender_log[-6000:])
             final_video = OUT / ("YouTube_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".mp4")
             self.write_log("Combining rendered 3D scene with narration...")
             mux = [ffmpeg, "-y", "-i", str(scene_video), "-i", str(audio_path),
