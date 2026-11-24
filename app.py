@@ -23,14 +23,14 @@ class App:
  def style(self):
     s=ttk.Style(); s.theme_use("clam"); s.configure("TNotebook",background="#f6f8fc",borderwidth=0)
     s.configure("TNotebook.Tab",background="#eef2f7",foreground="#536176",padding=(18,10),font=("Segoe UI",10,"bold"))
-    s.map("TNotebook.Tab",background=[("selected","#4559d6")],foreground=[("selected","white")])
+    s.map("TNotebook.Tab",background=[("selected","#4559d6")],foreground=[("selected","#172033")])
     s.configure("TCombobox",fieldbackground="#ffffff",background="#ffffff",foreground="#263248")
     s.configure("Treeview",background="#ffffff",foreground="#263248",fieldbackground="#ffffff",rowheight=30)
     s.configure("Treeview.Heading",background="#e6ebf3",foreground="#263248")
  def label(self,p,t,size=10,color="#536176",bold=False):
     return tk.Label(p,text=t,bg=p.cget("bg"),fg=color,font=("Segoe UI",size,"bold" if bold else "normal"))
  def button(self,p,t,fn,primary=False):
-    return tk.Button(p,text=t,command=fn,bg="#3867f5" if primary else "#edf2ff",fg="white" if primary else "#263248",activebackground="#dce6ff",relief="flat",bd=0,padx=14,pady=10,cursor="hand2",font=("Segoe UI",9,"bold"))
+    return tk.Button(p,text=t,command=fn,bg="#3867f5" if primary else "#edf2ff",fg="#172033" if primary else "#263248",activebackground="#dce6ff",relief="flat",bd=0,padx=14,pady=10,cursor="hand2",font=("Segoe UI",9,"bold"))
  def card(self,p,t):
     f=tk.Frame(p,bg="#ffffff",highlightbackground="#e3e8f0",highlightthickness=1)
     self.label(f,t,10,"#172033",True).pack(anchor="w",padx=14,pady=(12,8)); return f
@@ -70,7 +70,7 @@ class App:
     self.label(r,"Length").pack(side="left"); self.minutes=tk.StringVar(value="1"); ttk.Combobox(r,textvariable=self.minutes,values=["1","2","3","5"],width=6,state="readonly").pack(side="left",padx=8)
     self.label(r,"Format").pack(side="left",padx=(15,4)); self.res=tk.StringVar(value="1280x720"); ttk.Combobox(r,textvariable=self.res,values=["1280x720","1920x1080","1080x1920"],width=12,state="readonly").pack(side="left")
     sc=self.card(left,"EDITABLE SCRIPT"); sc.pack(fill="both",expand=True)
-    self.script=tk.Text(sc,bg="#f5f7fb",fg="#263248",insertbackground="white",relief="flat",font=("Consolas",10),wrap="word",height=17,padx=12,pady=12); self.script.pack(fill="both",expand=True,padx=10,pady=(0,10))
+    self.script=tk.Text(sc,bg="#f5f7fb",fg="#263248",insertbackground="#172033",relief="flat",font=("Consolas",10),wrap="word",height=17,padx=12,pady=12); self.script.pack(fill="both",expand=True,padx=10,pady=(0,10))
     actions=tk.Frame(left,bg="#f6f8fc"); actions.pack(fill="x",pady=8)
     self.button(actions,"✦ GENERATE SCRIPT",self.generate,True).pack(side="left")
     self.button(actions,"SAVE SCRIPT",self.save_script).pack(side="left",padx=8)
@@ -91,11 +91,11 @@ class App:
     self.label(self.settings,"Credentials are stored locally on this PC. Never share your settings folder.",9,"#667085").pack(anchor="w",padx=12,pady=(0,12))
     c=self.card(self.settings,"AI SCRIPT GENERATION"); c.pack(fill="x",padx=8,pady=6)
     self.label(c,"OpenAI API key",9).pack(anchor="w",padx=14)
-    self.openai=tk.StringVar(value=self.cfg["openai_key"]); tk.Entry(c,textvariable=self.openai,show="•",bg="#f5f7fb",fg="white",insertbackground="white",relief="flat").pack(fill="x",padx=14,pady=(5,14),ipady=7)
+    self.openai=tk.StringVar(value=self.cfg["openai_key"]); tk.Entry(c,textvariable=self.openai,show="•",bg="#f5f7fb",fg="#263248",insertbackground="#263248",relief="flat").pack(fill="x",padx=14,pady=(5,14),ipady=7)
     c=self.card(self.settings,"YOUTUBE CHANNEL CONNECTION"); c.pack(fill="x",padx=8,pady=6)
     self.label(c,"Google OAuth Desktop client JSON file",9).pack(anchor="w",padx=14)
     row=tk.Frame(c,bg="#ffffff"); row.pack(fill="x",padx=14,pady=(5,14))
-    self.google=tk.StringVar(value=self.cfg["google_json"]); tk.Entry(row,textvariable=self.google,bg="#f5f7fb",fg="white",insertbackground="white",relief="flat").pack(side="left",fill="x",expand=True,ipady=7)
+    self.google=tk.StringVar(value=self.cfg["google_json"]); tk.Entry(row,textvariable=self.google,bg="#f5f7fb",fg="#172033",insertbackground="#172033",relief="flat").pack(side="left",fill="x",expand=True,ipady=7)
     self.button(row,"BROWSE",self.browse).pack(side="left",padx=7)
     self.label(c,"Google Cloud setup: create a project → enable YouTube Data API v3 → configure OAuth consent → create OAuth Client ID (Desktop app) → download JSON → select it above.",9,"#667085").pack(anchor="w",padx=14,pady=(0,12))
     c=self.card(self.settings,"VOICE"); c.pack(fill="x",padx=8,pady=6)
