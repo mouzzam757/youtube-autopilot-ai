@@ -30,8 +30,13 @@ def principled(name, color, metallic=0.0, roughness=0.45, emission=None):
     bs.inputs["Metallic"].default_value = metallic
     bs.inputs["Roughness"].default_value = roughness
     if emission:
-        bs.inputs["Emission Color"].default_value = (*emission, 1)
-        bs.inputs["Emission Strength"].default_value = 1.8
+        # Blender 3.x calls this socket Emission; Blender 4.x calls it Emission Color.
+        emission_socket = bs.inputs.get("Emission Color") or bs.inputs.get("Emission")
+        if emission_socket:
+            emission_socket.default_value = (*emission, 1)
+        strength_socket = bs.inputs.get("Emission Strength")
+        if strength_socket:
+            strength_socket.default_value = 1.8
     return mat
 
 def planet_material(name, colors, roughness=0.8):
@@ -78,8 +83,17 @@ def main():
     resolution = cfg.get("resolution", "1280x720")
     width, height = [int(v) for v in resolution.split("x")]
     scene = bpy.context.scene
-    scene.render.engine = "BLENDER_EEVEE_NEXT"
-    scene.eevee.taa_render_samples = 16
+    # Select the Eevee engine supported by the installed Blender version.
+    engine_items = scene.render.bl_rna.properties["engine"].enum_items
+    available_engines = {item.identifier for item in engine_items}
+    if "BLENDER_EEVEE_NEXT" in available_engines:
+        scene.render.engine = "BLENDER_EEVEE_NEXT"  # Blender 4.x
+    elif "BLENDER_EEVEE" in available_engines:
+        scene.render.engine = "BLENDER_EEVEE"       # Blender 2.8–3.x
+    else:
+        raise RuntimeError("This Blender version does not provide the Eevee render engine.")
+    if hasattr(scene, "eevee") and hasattr(scene.eevee, "taa_render_samples"):
+        scene.eevee.taa_render_samples = 16
     scene.render.resolution_x = width
     scene.render.resolution_y = height
     scene.render.resolution_percentage = 100
