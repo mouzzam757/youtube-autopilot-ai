@@ -151,7 +151,7 @@ def main():
                                      minor_segments=8, location=(0, 0, 0))
     atmosphere = bpy.context.object
     atmosphere.name = "Atmospheric Rim"
-    atmosphere.data.materials.append(accent_mat
+    atmosphere.data.materials.append(accent_mat)
 
     # Distant host star for exoplanet mode.
     if style == "Real Exoplanet Cinematic Exploration":
