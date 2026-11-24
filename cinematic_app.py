@@ -163,7 +163,7 @@ class CinematicApp:
         panel.pack(fill="x", padx=28, pady=16)
         panel.columnconfigure(1, weight=1)
         self._label(panel, "VIDEO TOPIC", 0)
-        tk.Entry(panel, textvariable=self.topic, bg="#f5f7fb", fg="#172033", insertbackground="white",
+        tk.Entry(panel, textvariable=self.topic, bg="#f5f7fb", fg="#172033", insertbackground="#172033",
                  relief="flat", font=("Segoe UI", 11)).grid(row=0, column=1, sticky="ew", padx=(0, 18), pady=12, ipady=8)
         self._label(panel, "VIDEO STYLE", 1)
         ttk.Combobox(panel, textvariable=self.style, values=STYLES, state="readonly",
