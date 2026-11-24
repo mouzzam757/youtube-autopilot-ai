@@ -25,6 +25,9 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
+      - name: Check Python syntax
+        run: python -m py_compile app.py cinematic_app.py blender_scene.py
+
       - name: Download FFmpeg
         shell: pwsh
         run: |
