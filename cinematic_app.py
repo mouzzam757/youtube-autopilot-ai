@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import threading
+import time
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
@@ -151,6 +152,11 @@ class CinematicApp:
         self.resolution = tk.StringVar(value="1280x720")
         self.voice = tk.StringVar(value="en-US-GuyNeural")
         self.status = tk.StringVar(value="Ready to create")
+        self.target_duration = tk.StringVar(value="45 seconds")
+        self.elapsed_text = tk.StringVar(value="Elapsed time: 00:00")
+        self.timer_started = None
+        self.timer_job = None
+        self.generating = False
         self._build()
         self.root.after(150, self._poll)
 
@@ -223,7 +229,13 @@ class CinematicApp:
         tk.Label(right_top, text="●", bg=self.WHITE, fg=self.GREEN,
                  font=("Segoe UI", 10)).pack(side="left")
         tk.Label(right_top, textvariable=self.status, bg=self.WHITE, fg=self.MUTED,
-                 font=("Segoe UI", 9)).pack(side="left", padx=(6, 0))
+                 font=("Segoe UI", 9)).pack(side="left", padx=(6, 12))
+        self.header_generate = tk.Button(right_top, text="✦  GENERATE VIDEO",
+                 command=self.generate, bg=self.BLUE, fg=self.WHITE,
+                 activebackground="#2563D9", activeforeground=self.WHITE,
+                 relief="flat", bd=0, font=("Segoe UI", 9, "bold"),
+                 padx=14, pady=9, cursor="hand2")
+        self.header_generate.pack(side="left")
 
         self.content = tk.Frame(main, bg=self.BG)
         self.content.pack(fill="both", expand=True, padx=26, pady=22)
@@ -323,13 +335,19 @@ class CinematicApp:
         col1 = tk.Frame(row, bg=self.WHITE)
         col1.pack(side="left", fill="x", expand=True, padx=(0, 8))
         col2 = tk.Frame(row, bg=self.WHITE)
-        col2.pack(side="left", fill="x", expand=True, padx=(8, 0))
+        col2.pack(side="left", fill="x", expand=True, padx=8)
+        col3 = tk.Frame(row, bg=self.WHITE)
+        col3.pack(side="left", fill="x", expand=True, padx=(8, 0))
         self._field_label(col1, "Resolution")
         ttk.Combobox(col1, textvariable=self.resolution, values=["1280x720", "1920x1080"],
                       state="readonly").pack(fill="x")
         self._field_label(col2, "Narration voice")
         ttk.Combobox(col2, textvariable=self.voice,
                      values=["en-US-GuyNeural", "en-US-JennyNeural", "en-GB-RyanNeural", "en-GB-SoniaNeural"],
+                     state="readonly").pack(fill="x")
+        self._field_label(col3, "Target length")
+        ttk.Combobox(col3, textvariable=self.target_duration,
+                     values=["30 seconds", "45 seconds", "1 minute", "2 minutes", "3 minutes", "5 minutes"],
                      state="readonly").pack(fill="x")
 
         blender_card = self._card(left, "RENDER ENGINE", "Blender is used to build the 3D scene locally.")
@@ -360,16 +378,19 @@ class CinematicApp:
         pipeline.pack(fill="x", pady=(0, 12))
         self.progress = ttk.Progressbar(pipeline, mode="indeterminate")
         self.progress.pack(fill="x", padx=16, pady=(8, 6))
+        tk.Label(pipeline, textvariable=self.elapsed_text, bg=self.WHITE, fg=self.BLUE,
+                 font=("Segoe UI", 10, "bold")).pack(anchor="w", padx=16, pady=(2, 3))
         tk.Label(pipeline, textvariable=self.status, bg=self.WHITE, fg=self.MUTED,
                  font=("Segoe UI", 8)).pack(anchor="w", padx=16, pady=(0, 10))
 
         actions = tk.Frame(right, bg=self.BG)
         actions.pack(fill="x")
-        tk.Button(actions, text="✦   GENERATE 3D VIDEO", command=self.generate,
+        self.generate_button = tk.Button(actions, text="✦   GENERATE 3D VIDEO", command=self.generate,
                   bg=self.BLUE, fg=self.WHITE, activebackground="#2563D9",
                   activeforeground=self.WHITE, relief="flat", bd=0,
                   font=("Segoe UI", 10, "bold"), padx=16, pady=14,
-                  cursor="hand2").pack(fill="x")
+                  cursor="hand2")
+        self.generate_button.pack(fill="x")
         tk.Button(actions, text="OPEN OUTPUT FOLDER", command=self.open_output,
                   bg=self.WHITE, fg=self.INK, activebackground=self.PALE_BLUE,
                   relief="flat", bd=0, font=("Segoe UI", 9, "bold"),
@@ -429,8 +450,10 @@ class CinematicApp:
         if not hasattr(self, "project_list"):
             return
         self.project_list.delete(0, "end")
-        for file in sorted(OUT.glob("*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True):
-            self.project_list.insert("end", f"  {file.name}     •     {file.stat().st_size // (1024*1024)} MB")
+        project_files = list((OUT / "projects").glob("*/Agent_Artifacts.mp4")) if (OUT / "projects").exists() else []
+        project_files += list(OUT.glob("*.mp4"))
+        for file in sorted(project_files, key=lambda p: p.stat().st_mtime, reverse=True):
+            self.project_list.insert("end", f"  {file.parent.name}  |  {file.name}  •  {file.stat().st_size // (1024*1024)} MB")
 
     def _build_templates_page(self):
         page = tk.Frame(self.content, bg=self.BG)
@@ -500,7 +523,20 @@ class CinematicApp:
     def write_log(self, message):
         self.events.put(("log", message))
 
+    def _format_elapsed(self, seconds):
+        seconds = max(0, int(seconds))
+        hours, rem = divmod(seconds, 3600)
+        minutes, secs = divmod(rem, 60)
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}" if hours else f"{minutes:02d}:{secs:02d}"
+
+    def _tick_timer(self):
+        if self.timer_started is not None:
+            self.elapsed_text.set("Elapsed time: " + self._format_elapsed(time.perf_counter() - self.timer_started))
+            self.timer_job = self.root.after(1000, self._tick_timer)
+
     def generate(self):
+        if self.generating:
+            return
         topic = self.topic.get().strip()
         blender = self.blender.get().strip()
         ffmpeg = find_ffmpeg()
@@ -513,13 +549,25 @@ class CinematicApp:
         if not ffmpeg:
             messagebox.showerror("FFmpeg not found", "Install FFmpeg and add its bin folder to Windows PATH.")
             return
+        self.generating = True
+        self.timer_started = time.perf_counter()
+        self.elapsed_text.set("Elapsed time: 00:00")
+        self._tick_timer()
+        self.generate_button.configure(state="disabled")
+        self.header_generate.configure(state="disabled")
         self.progress.start(12)
-        self.status.set("Generating — keep this window open.")
+        self.status.set("Agent working — keep this window open.")
         threading.Thread(target=self._worker, args=(topic, self.style.get(), blender, ffmpeg,
-                            self.resolution.get(), self.voice.get()), daemon=True).start()
+                            self.resolution.get(), self.voice.get(), self.target_duration.get(),
+                            self.timer_started), daemon=True).start()
 
-    def _worker(self, topic, style, blender, ffmpeg, resolution, voice):
+    def _worker(self, topic, style, blender, ffmpeg, resolution, voice, target_duration, started_at):
+        project_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_topic = re.sub(r"[^A-Za-z0-9_-]+", "_", topic).strip("_")[:48] or "Video"
+        project_dir = OUT / "projects" / f"{project_stamp}_{safe_topic}"
+        project_dir.mkdir(parents=True, exist_ok=True)
         try:
+            self.write_log("Agent started: research → script → narration → 3D production → final assembly.")
             self.write_log("Researching topic...")
             planet = None
             if style == STYLES[4]:
@@ -532,18 +580,36 @@ class CinematicApp:
                 research = research_topic(topic)
                 self.write_log(f"Research source: {research['url']}")
             script = make_script(topic, research, style, planet)
-            (OUT / "last_script.txt").write_text(script, encoding="utf-8")
-            self.write_log("Preparing free neural narration...")
+            script_path = project_dir / "script.txt"
+            script_path.write_text(script, encoding="utf-8")
+            self.write_log("Preparing narration...")
             import asyncio
             import edge_tts
-            audio_path = OUT / "narration.mp3"
+            audio_path = project_dir / "narration.mp3"
             asyncio.run(edge_tts.Communicate(script, voice).save(str(audio_path)))
+            desired_seconds = {"30 seconds": 30, "45 seconds": 45, "1 minute": 60,
+                               "2 minutes": 120, "3 minutes": 180, "5 minutes": 300}.get(target_duration, 45)
+            ffprobe = shutil.which("ffprobe")
+            if not ffprobe:
+                candidate = str(Path(ffmpeg).with_name("ffprobe.exe"))
+                ffprobe = candidate if Path(candidate).is_file() else ""
+            if ffprobe:
+                probe = subprocess.run([ffprobe, "-v", "error", "-show_entries", "format=duration",
+                                        "-of", "default=noprint_wrappers=1:nokey=1", str(audio_path)],
+                                       capture_output=True, text=True)
+                narration_seconds = float(probe.stdout.strip()) if probe.returncode == 0 and probe.stdout.strip() else max(1, len(script.split()) / 2.2)
+            else:
+                narration_seconds = max(1, len(script.split()) / 2.2)
+            self.write_log(f"Target length: {target_duration}. Actual narration: {self._format_elapsed(narration_seconds)}.")
+            if narration_seconds + 1 < desired_seconds:
+                self.write_log("Note: this first-draft script is shorter than the selected target. The final video follows narration length.")
             config = {
                 "topic": topic, "style": style, "resolution": resolution,
-                "output": str(OUT / "blender_scene.mp4"),
+                "duration_seconds": narration_seconds,
+                "output": str(project_dir / "blender_scene.mp4"),
                 "planet": planet,
             }
-            config_path = OUT / "scene_config.json"
+            config_path = project_dir / "scene_config.json"
             config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
             scene_script = ROOT / "blender_scene.py"
             if not scene_script.is_file():
@@ -553,16 +619,16 @@ class CinematicApp:
             result = subprocess.run(command, capture_output=True, text=True, cwd=str(ROOT))
             if result.returncode:
                 raise RuntimeError("Blender failed:\n" + (result.stderr or result.stdout)[-5000:])
-            scene_video = OUT / "blender_scene.mp4"
+            scene_video = project_dir / "blender_scene.mp4"
             if not scene_video.is_file():
-                alternatives = sorted(OUT.glob("blender_scene*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True)
+                alternatives = sorted(project_dir.glob("blender_scene*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True)
                 if alternatives:
                     scene_video = alternatives[0]
                 else:
                     blender_log = (result.stdout or "") + "\n" + (result.stderr or "")
                     raise RuntimeError("Blender returned successfully but did not create the expected MP4:\n"
                                        + str(scene_video) + "\n\nBlender output:\n" + blender_log[-6000:])
-            final_video = OUT / ("YouTube_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".mp4")
+            final_video = project_dir / "Agent_Artifacts.mp4"
             self.write_log("Combining rendered 3D scene with narration...")
             mux = [ffmpeg, "-y", "-i", str(scene_video), "-i", str(audio_path),
                    "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac",
@@ -570,8 +636,27 @@ class CinematicApp:
             joined = subprocess.run(mux, capture_output=True, text=True)
             if joined.returncode:
                 raise RuntimeError("FFmpeg audio mux failed:\n" + joined.stderr[-2500:])
-            self.write_log("SUCCESS — " + str(final_video))
-            self.events.put(("done", str(final_video)))
+            elapsed_seconds = round(time.perf_counter() - started_at, 2)
+            project_record = {
+                "project_name": safe_topic,
+                "topic": topic,
+                "style": style,
+                "target_duration": target_duration,
+                "narration_duration_seconds": round(narration_seconds, 2),
+                "generation_time_seconds": elapsed_seconds,
+                "generation_time": self._format_elapsed(elapsed_seconds),
+                "created_at": datetime.now().isoformat(timespec="seconds"),
+                "resolution": resolution,
+                "voice": voice,
+                "video_file": str(final_video),
+                "script_file": str(script_path),
+                "source_url": research.get("url", ""),
+                "status": "completed"
+            }
+            (project_dir / "project.json").write_text(json.dumps(project_record, indent=2), encoding="utf-8")
+            self.write_log("SUCCESS — saved video, narration, script and project timing.")
+            self.events.put(("done", {"video": str(final_video), "elapsed": elapsed_seconds,
+                                     "project": str(project_dir), "record": project_record}))
         except Exception as exc:
             self.events.put(("error", str(exc)))
 
@@ -584,13 +669,32 @@ class CinematicApp:
                     self.log.see("end")
                 elif kind == "done":
                     self.progress.stop()
-                    self.status.set("Video completed.")
-                    self.log.insert("end", "Open the output folder to play your MP4.\n")
+                    self.generating = False
+                    if self.timer_job:
+                        self.root.after_cancel(self.timer_job)
+                        self.timer_job = None
+                    elapsed = payload["elapsed"]
+                    self.timer_started = None
+                    self.elapsed_text.set("Completed in: " + self._format_elapsed(elapsed))
+                    self.status.set("Project saved.")
+                    self.generate_button.configure(state="normal")
+                    self.header_generate.configure(state="normal")
+                    self.log.insert("end", f"Project saved with generation time: {self._format_elapsed(elapsed)}\n")
                     self.log.see("end")
                     self._refresh_projects()
-                    messagebox.showinfo("Video ready", "Your video was rendered:\n" + payload)
+                    messagebox.showinfo("Video ready", f"Your video was rendered:\n{payload['video']}\n\nGeneration time: {self._format_elapsed(elapsed)}\nProject folder: {payload['project']}")
                 elif kind == "error":
                     self.progress.stop()
+                    self.generating = False
+                    if self.timer_job:
+                        self.root.after_cancel(self.timer_job)
+                        self.timer_job = None
+                    if self.timer_started is not None:
+                        elapsed = time.perf_counter() - self.timer_started
+                        self.elapsed_text.set("Stopped after: " + self._format_elapsed(elapsed))
+                    self.timer_started = None
+                    self.generate_button.configure(state="normal")
+                    self.header_generate.configure(state="normal")
                     self.status.set("Generation failed — see activity log.")
                     self.log.insert("end", "\nERROR: " + payload + "\n")
                     self.log.see("end")
