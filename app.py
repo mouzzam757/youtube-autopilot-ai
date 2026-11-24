@@ -9,7 +9,7 @@ ROOT=Path(__file__).resolve().parent
 DATA=ROOT/"data"; OUT=ROOT/"output"
 DATA.mkdir(exist_ok=True); OUT.mkdir(exist_ok=True)
 CFG=DATA/"settings.json"
-DEFAULT={"openai_key":"","google_json":"","voice":"en-US-GuyNeural","auto":True,"privacy":"public"}
+DEFAULT={"openai_key":"","google_json":"","voice":"en-US-GuyNeural","auto":False,"privacy":"public"}
 def readcfg():
     try: return {**DEFAULT,**json.loads(CFG.read_text(encoding="utf-8"))}
     except: return DEFAULT.copy()
@@ -17,92 +17,92 @@ def savecfg(c): CFG.write_text(json.dumps(c,indent=2),encoding="utf-8")
 
 class App:
  def __init__(self,root):
-    self.r=root; self.r.title("YouTube Autopilot AI"); self.r.geometry("1120x760"); self.r.minsize(900,650); self.r.configure(bg="#0a1020")
+    self.r=root; self.r.title("Agent Artifacts"); self.r.geometry("1120x760"); self.r.minsize(900,650); self.r.configure(bg="#f6f8fc")
     self.cfg=readcfg(); self.q=queue.Queue(); self.busy=False; self.video=None; self.title="Facts You Should Know"; self.description=""
     self.style(); self.build(); self.poll(); self.log("Welcome. Configure OpenAI and Google OAuth in Settings to enable generation and uploads.")
  def style(self):
-    s=ttk.Style(); s.theme_use("clam"); s.configure("TNotebook",background="#0a1020",borderwidth=0)
-    s.configure("TNotebook.Tab",background="#182440",foreground="#dce5ff",padding=(18,10),font=("Segoe UI",10,"bold"))
+    s=ttk.Style(); s.theme_use("clam"); s.configure("TNotebook",background="#f6f8fc",borderwidth=0)
+    s.configure("TNotebook.Tab",background="#eef2f7",foreground="#536176",padding=(18,10),font=("Segoe UI",10,"bold"))
     s.map("TNotebook.Tab",background=[("selected","#4559d6")],foreground=[("selected","white")])
-    s.configure("TCombobox",fieldbackground="#142039",background="#142039",foreground="white")
-    s.configure("Treeview",background="#111c32",foreground="#e5eaf5",fieldbackground="#111c32",rowheight=28)
-    s.configure("Treeview.Heading",background="#263657",foreground="white")
- def label(self,p,t,size=10,color="#cbd5e1",bold=False):
+    s.configure("TCombobox",fieldbackground="#ffffff",background="#ffffff",foreground="#263248")
+    s.configure("Treeview",background="#ffffff",foreground="#263248",fieldbackground="#ffffff",rowheight=30)
+    s.configure("Treeview.Heading",background="#e6ebf3",foreground="#263248")
+ def label(self,p,t,size=10,color="#536176",bold=False):
     return tk.Label(p,text=t,bg=p.cget("bg"),fg=color,font=("Segoe UI",size,"bold" if bold else "normal"))
  def button(self,p,t,fn,primary=False):
-    return tk.Button(p,text=t,command=fn,bg="#5265e8" if primary else "#1d2b49",fg="white",activebackground="#7585ff",relief="flat",bd=0,padx=14,pady=10,cursor="hand2",font=("Segoe UI",9,"bold"))
+    return tk.Button(p,text=t,command=fn,bg="#3867f5" if primary else "#edf2ff",fg="white" if primary else "#263248",activebackground="#dce6ff",relief="flat",bd=0,padx=14,pady=10,cursor="hand2",font=("Segoe UI",9,"bold"))
  def card(self,p,t):
-    f=tk.Frame(p,bg="#121d34",highlightbackground="#2a3a5c",highlightthickness=1)
-    self.label(f,t,10,"#ffffff",True).pack(anchor="w",padx=14,pady=(12,8)); return f
+    f=tk.Frame(p,bg="#ffffff",highlightbackground="#e3e8f0",highlightthickness=1)
+    self.label(f,t,10,"#172033",True).pack(anchor="w",padx=14,pady=(12,8)); return f
  def build(self):
-    h=tk.Frame(self.r,bg="#0a1020"); h.pack(fill="x",padx=24,pady=18)
-    self.label(h,"◈",30,"#8494ff",True).pack(side="left")
-    x=tk.Frame(h,bg="#0a1020"); x.pack(side="left",padx=10)
-    self.label(x,"YOUTUBE AUTOPILOT AI",18,"white",True).pack(anchor="w")
-    self.label(x,"FACTS CHANNEL  /  WINDOWS DESKTOP STUDIO",8,"#8292b5",True).pack(anchor="w")
-    self.status=tk.Label(h,text="● READY",bg="#0a1020",fg="#61d6a7",font=("Segoe UI",9,"bold")); self.status.pack(side="right")
+    h=tk.Frame(self.r,bg="#f6f8fc"); h.pack(fill="x",padx=24,pady=18)
+    self.label(h,"✦",30,"#3867f5",True).pack(side="left")
+    x=tk.Frame(h,bg="#f6f8fc"); x.pack(side="left",padx=10)
+    self.label(x,"AGENT ARTIFACTS",18,"#172033",True).pack(anchor="w")
+    self.label(x,"AI VIDEO INTELLIGENCE  /  CREATOR STUDIO",8,"#778399",True).pack(anchor="w")
+    self.status=tk.Label(h,text="● READY",bg="#f6f8fc",fg="#15966b",font=("Segoe UI",9,"bold")); self.status.pack(side="right")
     self.nb=ttk.Notebook(self.r); self.nb.pack(fill="both",expand=True,padx=22,pady=(0,18))
-    self.home=tk.Frame(self.nb,bg="#0a1020"); self.make=tk.Frame(self.nb,bg="#0a1020"); self.settings=tk.Frame(self.nb,bg="#0a1020"); self.history=tk.Frame(self.nb,bg="#0a1020")
+    self.home=tk.Frame(self.nb,bg="#f6f8fc"); self.make=tk.Frame(self.nb,bg="#f6f8fc"); self.settings=tk.Frame(self.nb,bg="#f6f8fc"); self.history=tk.Frame(self.nb,bg="#f6f8fc")
     for tab,name in [(self.home,"Overview"),(self.make,"Create video"),(self.settings,"Settings"),(self.history,"Activity")]: self.nb.add(tab,text="  "+name+"  ")
     self.build_home(); self.build_make(); self.build_settings(); self.build_history()
  def build_home(self):
-    self.label(self.home,"Your independent video production desk",18,"white",True).pack(anchor="w",padx=12,pady=(20,5))
-    self.label(self.home,"Research a topic, write a script, create a narrated video, then publish it to YouTube.",10,"#91a0bf").pack(anchor="w",padx=12,pady=(0,18))
-    row=tk.Frame(self.home,bg="#0a1020"); row.pack(fill="x",padx=6)
+    self.label(self.home,"Your AI creator command center",18,"#172033",True).pack(anchor="w",padx=12,pady=(20,5))
+    self.label(self.home,"Research a topic, write a script, create a narrated video, then publish it to YouTube.",10,"#667085").pack(anchor="w",padx=12,pady=(0,18))
+    row=tk.Frame(self.home,bg="#f6f8fc"); row.pack(fill="x",padx=6)
     for head,val,sub in [("CONTENT","FACTS","Curiosity-led educational videos"),("WORKFLOW","4 STAGES","Research · Script · Render · Publish"),("PUBLISH MODE","AUTOMATIC","You choose when to enable it")]:
         c=self.card(row,head); c.pack(side="left",fill="both",expand=True,padx=5)
-        self.label(c,val,20,"white",True).pack(anchor="w",padx=14)
-        self.label(c,sub,8,"#91a0bf").pack(anchor="w",padx=14,pady=(4,14))
+        self.label(c,val,20,"#172033",True).pack(anchor="w",padx=14)
+        self.label(c,sub,8,"#667085").pack(anchor="w",padx=14,pady=(4,14))
     c=self.card(self.home,"QUICK START"); c.pack(fill="x",padx=10,pady=16)
     self.label(c,"1  Configure API keys in Settings.",10).pack(anchor="w",padx=14,pady=4)
     self.label(c,"2  Create and review a facts script.",10).pack(anchor="w",padx=14,pady=4)
     self.label(c,"3  Render an MP4 and publish or schedule it.",10).pack(anchor="w",padx=14,pady=4)
-    self.label(c,"The app must remain open while it renders or sends an upload. Scheduled publication is handled by YouTube after a successful scheduled upload.",9,"#9aabd0").pack(anchor="w",padx=14,pady=(8,14))
+    self.label(c,"The app must remain open while it renders or sends an upload. Scheduled publication is handled by YouTube after a successful scheduled upload.",9,"#667085").pack(anchor="w",padx=14,pady=(8,14))
     self.button(c,"OPEN VIDEO WORKSPACE →",lambda:self.nb.select(self.make),True).pack(anchor="w",padx=14,pady=(0,14))
  def build_make(self):
-    left=tk.Frame(self.make,bg="#0a1020"); left.pack(side="left",fill="both",expand=True,padx=(6,10),pady=14)
-    right=tk.Frame(self.make,bg="#0a1020",width=300); right.pack(side="right",fill="y",padx=(0,6),pady=14); right.pack_propagate(False)
+    left=tk.Frame(self.make,bg="#f6f8fc"); left.pack(side="left",fill="both",expand=True,padx=(6,10),pady=14)
+    right=tk.Frame(self.make,bg="#f6f8fc",width=300); right.pack(side="right",fill="y",padx=(0,6),pady=14); right.pack_propagate(False)
     c=self.card(left,"VIDEO BRIEF"); c.pack(fill="x",pady=(0,10))
-    self.label(c,"Topic or question",9,"#aab7d1").pack(anchor="w",padx=14)
+    self.label(c,"Topic or question",9,"#667085").pack(anchor="w",padx=14)
     self.topic=tk.StringVar(value="Amazing facts about space")
-    self.topic_entry=tk.Entry(c,textvariable=self.topic,bg="#0d172b",fg="white",insertbackground="white",relief="flat",font=("Segoe UI",10)); self.topic_entry.pack(fill="x",padx=14,pady=7,ipady=8)
-    r=tk.Frame(c,bg="#121d34"); r.pack(fill="x",padx=14,pady=(0,12))
+    self.topic_entry=tk.Entry(c,textvariable=self.topic,bg="#f5f7fb",fg="#263248",insertbackground="#263248",relief="flat",font=("Segoe UI",10)); self.topic_entry.pack(fill="x",padx=14,pady=7,ipady=8)
+    r=tk.Frame(c,bg="#ffffff"); r.pack(fill="x",padx=14,pady=(0,12))
     self.label(r,"Length").pack(side="left"); self.minutes=tk.StringVar(value="1"); ttk.Combobox(r,textvariable=self.minutes,values=["1","2","3","5"],width=6,state="readonly").pack(side="left",padx=8)
     self.label(r,"Format").pack(side="left",padx=(15,4)); self.res=tk.StringVar(value="1280x720"); ttk.Combobox(r,textvariable=self.res,values=["1280x720","1920x1080","1080x1920"],width=12,state="readonly").pack(side="left")
     sc=self.card(left,"EDITABLE SCRIPT"); sc.pack(fill="both",expand=True)
-    self.script=tk.Text(sc,bg="#0d172b",fg="#e5eaf5",insertbackground="white",relief="flat",font=("Consolas",10),wrap="word",height=17,padx=12,pady=12); self.script.pack(fill="both",expand=True,padx=10,pady=(0,10))
-    actions=tk.Frame(left,bg="#0a1020"); actions.pack(fill="x",pady=8)
+    self.script=tk.Text(sc,bg="#f5f7fb",fg="#263248",insertbackground="white",relief="flat",font=("Consolas",10),wrap="word",height=17,padx=12,pady=12); self.script.pack(fill="both",expand=True,padx=10,pady=(0,10))
+    actions=tk.Frame(left,bg="#f6f8fc"); actions.pack(fill="x",pady=8)
     self.button(actions,"✦ GENERATE SCRIPT",self.generate,True).pack(side="left")
     self.button(actions,"SAVE SCRIPT",self.save_script).pack(side="left",padx=8)
     self.button(actions,"RENDER VIDEO",self.render).pack(side="left")
     c=self.card(right,"PRODUCTION PIPELINE"); c.pack(fill="x",pady=(0,10))
     self.progress=ttk.Progressbar(c,maximum=100); self.progress.pack(fill="x",padx=14,pady=8)
-    self.ptext=self.label(c,"Waiting for a topic",9,"#91a0bf"); self.ptext.pack(anchor="w",padx=14,pady=(0,10))
+    self.ptext=self.label(c,"Waiting for a topic",9,"#667085"); self.ptext.pack(anchor="w",padx=14,pady=(0,10))
     for t in ["01  Research source notes","02  Generate narration script","03  Create AI voiceover","04  Design fact-card visuals","05  Render MP4","06  Upload to YouTube"]: self.label(c,t,9).pack(anchor="w",padx=14,pady=5)
     c=self.card(right,"PUBLISHING"); c.pack(fill="x",pady=(0,10))
-    self.auto=tk.BooleanVar(value=bool(self.cfg["auto"])); tk.Checkbutton(c,text="Auto-publish after rendering",variable=self.auto,bg="#121d34",fg="white",selectcolor="#263657",activebackground="#121d34").pack(anchor="w",padx=12,pady=7)
+    self.auto=tk.BooleanVar(value=bool(self.cfg["auto"])); tk.Checkbutton(c,text="Auto-publish after rendering",variable=self.auto,bg="#ffffff",fg="#263248",selectcolor="#e6ebf3",activebackground="#ffffff").pack(anchor="w",padx=12,pady=7)
     self.privacy=tk.StringVar(value=self.cfg["privacy"]); ttk.Combobox(c,textvariable=self.privacy,values=["public","unlisted","private"],state="readonly").pack(fill="x",padx=12,pady=(0,10))
     self.button(c,"UPLOAD CURRENT VIDEO",self.upload,True).pack(fill="x",padx=12,pady=(0,8))
     self.button(c,"SCHEDULE CURRENT VIDEO",self.schedule).pack(fill="x",padx=12,pady=(0,12))
     log=self.card(right,"LIVE LOG"); log.pack(fill="both",expand=True)
-    self.logbox=tk.Text(log,bg="#0d172b",fg="#91e3c1",height=8,relief="flat",font=("Consolas",8),wrap="word"); self.logbox.pack(fill="both",expand=True,padx=10,pady=(0,10))
+    self.logbox=tk.Text(log,bg="#f5f7fb",fg="#15966b",height=8,relief="flat",font=("Consolas",8),wrap="word"); self.logbox.pack(fill="both",expand=True,padx=10,pady=(0,10))
  def build_settings(self):
-    self.label(self.settings,"Connect your tools",18,"white",True).pack(anchor="w",padx=12,pady=(20,5))
-    self.label(self.settings,"Credentials are stored locally on this PC. Never share your settings folder.",9,"#91a0bf").pack(anchor="w",padx=12,pady=(0,12))
+    self.label(self.settings,"Connect your tools",18,"#172033",True).pack(anchor="w",padx=12,pady=(20,5))
+    self.label(self.settings,"Credentials are stored locally on this PC. Never share your settings folder.",9,"#667085").pack(anchor="w",padx=12,pady=(0,12))
     c=self.card(self.settings,"AI SCRIPT GENERATION"); c.pack(fill="x",padx=8,pady=6)
     self.label(c,"OpenAI API key",9).pack(anchor="w",padx=14)
-    self.openai=tk.StringVar(value=self.cfg["openai_key"]); tk.Entry(c,textvariable=self.openai,show="•",bg="#0d172b",fg="white",insertbackground="white",relief="flat").pack(fill="x",padx=14,pady=(5,14),ipady=7)
+    self.openai=tk.StringVar(value=self.cfg["openai_key"]); tk.Entry(c,textvariable=self.openai,show="•",bg="#f5f7fb",fg="white",insertbackground="white",relief="flat").pack(fill="x",padx=14,pady=(5,14),ipady=7)
     c=self.card(self.settings,"YOUTUBE CHANNEL CONNECTION"); c.pack(fill="x",padx=8,pady=6)
     self.label(c,"Google OAuth Desktop client JSON file",9).pack(anchor="w",padx=14)
-    row=tk.Frame(c,bg="#121d34"); row.pack(fill="x",padx=14,pady=(5,14))
-    self.google=tk.StringVar(value=self.cfg["google_json"]); tk.Entry(row,textvariable=self.google,bg="#0d172b",fg="white",insertbackground="white",relief="flat").pack(side="left",fill="x",expand=True,ipady=7)
+    row=tk.Frame(c,bg="#ffffff"); row.pack(fill="x",padx=14,pady=(5,14))
+    self.google=tk.StringVar(value=self.cfg["google_json"]); tk.Entry(row,textvariable=self.google,bg="#f5f7fb",fg="white",insertbackground="white",relief="flat").pack(side="left",fill="x",expand=True,ipady=7)
     self.button(row,"BROWSE",self.browse).pack(side="left",padx=7)
-    self.label(c,"Google Cloud setup: create a project → enable YouTube Data API v3 → configure OAuth consent → create OAuth Client ID (Desktop app) → download JSON → select it above.",9,"#aab7d1").pack(anchor="w",padx=14,pady=(0,12))
+    self.label(c,"Google Cloud setup: create a project → enable YouTube Data API v3 → configure OAuth consent → create OAuth Client ID (Desktop app) → download JSON → select it above.",9,"#667085").pack(anchor="w",padx=14,pady=(0,12))
     c=self.card(self.settings,"VOICE"); c.pack(fill="x",padx=8,pady=6)
     self.voice=tk.StringVar(value=self.cfg["voice"]); ttk.Combobox(c,textvariable=self.voice,values=["en-US-GuyNeural","en-US-AriaNeural","en-GB-RyanNeural","en-GB-SoniaNeural"],state="readonly",width=28).pack(anchor="w",padx=14,pady=(0,14))
     self.button(self.settings,"SAVE SETTINGS",self.save,True).pack(anchor="w",padx=12,pady=12)
  def build_history(self):
-    self.label(self.history,"Production activity",18,"white",True).pack(anchor="w",padx=12,pady=18)
+    self.label(self.history,"Production activity",18,"#172033",True).pack(anchor="w",padx=12,pady=18)
     self.tree=ttk.Treeview(self.history,columns=("date","topic","status","file"),show="headings")
     for c,t,w in [("date","Created",150),("topic","Topic",280),("status","Status",130),("file","Output file",450)]: self.tree.heading(c,text=t); self.tree.column(c,width=w)
     self.tree.pack(fill="both",expand=True,padx=12,pady=8); self.refresh_history()
@@ -118,12 +118,12 @@ class App:
       elif item[0]=="script": self.script.delete("1.0","end"); self.script.insert("1.0",item[1])
       elif item[0]=="history": self.refresh_history()
       elif item[0]=="error": messagebox.showerror("Autopilot AI",item[1])
-      elif item[0]=="done": self.busy=False; self.status.config(text="● READY",fg="#61d6a7")
+      elif item[0]=="done": self.busy=False; self.status.config(text="● READY",fg="#15966b")
     except queue.Empty: pass
     self.r.after(150,self.poll)
  def run(self,fn):
     if self.busy: messagebox.showinfo("Busy","A task is already running."); return
-    self.busy=True; self.status.config(text="● WORKING",fg="#f0bd6b")
+    self.busy=True; self.status.config(text="● WORKING",fg="#c27a18")
     def go():
      try: fn()
      except Exception as e: self.log("ERROR: "+str(e)); self.q.put(("error",str(e)))
@@ -249,7 +249,7 @@ class App:
     service,Media=self.youtube()
     status={"privacyStatus":"private" if publish else self.privacy.get(),"selfDeclaredMadeForKids":False}
     if publish: status["publishAt"]=publish
-    body={"snippet":{"title":title[:100],"description":(desc+"\n\nCreated with YouTube Autopilot AI.")[:5000],"categoryId":"27","tags":["facts","education","interesting facts"]},"status":status}
+    body={"snippet":{"title":title[:100],"description":(desc+"\n\nCreated with Agent Artifacts.")[:5000],"categoryId":"27","tags":["facts","education","interesting facts"]},"status":status}
     req=service.videos().insert(part="snippet,status",body=body,media_body=Media(str(path),chunksize=-1,resumable=True))
     response=None
     while response is None:
